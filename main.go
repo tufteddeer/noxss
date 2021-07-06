@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/elazarl/goproxy"
 	"io/ioutil"
@@ -23,14 +22,11 @@ var allowOnceList = make([]string, 0)
 func main() {
 	checkZenity()
 
-	verbose := flag.Bool("v", false, "should every proxy request be logged to stdout")
-	addr := flag.String("addr", ":8080", "proxy listen address")
-	flag.Parse()
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.OnRequest().DoFunc(handleRequest)
 	proxy.OnResponse().DoFunc(handleResponse)
-	proxy.Verbose = *verbose
-	log.Fatal(http.ListenAndServe(*addr, proxy))
+
+	log.Fatal(http.ListenAndServe("localhost:8080", proxy))
 }
 
 func handleRequest(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
