@@ -104,11 +104,6 @@ func extractLinks(body string) {
 			}
 		}
 	}
-
-	fmt.Println("allowOnceList:")
-	for _, item := range allowOnceList {
-		fmt.Println("\t" + item)
-	}
 }
 
 func isExternal(link string) bool {
