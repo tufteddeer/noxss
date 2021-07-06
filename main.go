@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/elazarl/goproxy"
+	goproxyhtml "github.com/elazarl/goproxy/ext/html"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,7 +25,7 @@ func main() {
 
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.OnRequest().DoFunc(handleRequest)
-	proxy.OnResponse().DoFunc(handleResponse)
+	proxy.OnResponse(goproxyhtml.IsHtml).DoFunc(handleResponse)
 
 	log.Fatal(http.ListenAndServe("localhost:8080", proxy))
 }
@@ -66,26 +67,19 @@ func handleRequest(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *ht
 }
 
 func handleResponse(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
-	if resp == nil {
-		return resp
-	}
 
 	contentType := resp.Header.Get("Content-Type")
 
-	if strings.HasPrefix(contentType, "text") {
-
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatalf("Failed to read body: %e\n", err)
-			return resp
-		}
-		body := string(data)
-		extractLinks(body)
-
-		newResp := goproxy.NewResponse(resp.Request, contentType, resp.StatusCode, body)
-		return newResp
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Failed to read body: %e\n", err)
+		return resp
 	}
-	return resp
+	body := string(data)
+	extractLinks(body)
+
+	newResp := goproxy.NewResponse(resp.Request, contentType, resp.StatusCode, body)
+	return newResp
 }
 
 // search for external links and add them to the allowOnceList
