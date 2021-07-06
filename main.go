@@ -8,13 +8,20 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os/exec"
 	"regexp"
 	"strings"
+)
+
+const (
+	userDialogMessage = "Do you want to run the following request?\n\n%s"
+	zenityBin         = "/usr/bin/zenity"
 )
 
 var allowOnceList = make([]string, 0)
 
 func main() {
+	checkZenity()
 
 	verbose := flag.Bool("v", false, "should every proxy request be logged to stdout")
 	addr := flag.String("addr", ":8080", "proxy listen address")
@@ -52,8 +59,14 @@ func handleRequest(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *ht
 		allowOnceList = append(allowOnceList[:index], allowOnceList[index+1:]...)
 		return req, nil
 	}
-	log.Printf("blocked")
-	return req, goproxy.NewResponse(req, "text/html", 200, "Blocked request")
+
+	// ask user
+	if askUser(req.URL) {
+		return req, nil
+	} else {
+		log.Printf("blocked")
+		return req, goproxy.NewResponse(req, "text/html", 200, "Blocked request")
+	}
 }
 
 func handleResponse(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
@@ -102,7 +115,6 @@ func extractLinks(body string) {
 	}
 }
 
-
 func isExternal(link string) bool {
 	// extremely stupid way to test this
 	return strings.HasPrefix(link, "http") || strings.HasPrefix(link, "www")
@@ -115,4 +127,27 @@ func find(array []string, item string) int {
 		}
 	}
 	return -1
+}
+
+// present a dialog to the user and ask if it is okay to send a request to the given url
+func askUser(url *url.URL) bool {
+	message := fmt.Sprintf(userDialogMessage, url.String())
+	cmd := exec.Command(zenityBin, "--question", "--text", message, "--title", "Noxss")
+	err := cmd.Run()
+	if err != nil {
+		if err.Error() != "exit status 1" {
+			log.Fatalf("Error opening dialog: %s", err)
+		}
+		return false
+	}
+	return true
+}
+
+// check if zenity is installed (required for dialogs)
+func checkZenity() {
+	cmd := exec.Command(zenityBin, "--help")
+	err := cmd.Run()
+	if err != nil {
+		log.Fatalf("Failed to execute zenity: %s", err.Error())
+	}
 }
