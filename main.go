@@ -61,7 +61,7 @@ func handleRequest(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *ht
 	if askUser(req.URL) {
 		return req, nil
 	} else {
-		log.Printf("blocked")
+		log.Printf("blocked %s\n", req.URL)
 		return req, goproxy.NewResponse(req, "text/html", 200, "Blocked request")
 	}
 }
