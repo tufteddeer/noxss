@@ -33,7 +33,7 @@ func handleRequest(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *ht
 
 	log.Printf("Request: %s\n", req.URL)
 	referer := req.Header.Get("Referer")
-	fmt.Println("referer: " + referer)
+
 	// allow normal website loading
 	if referer == "" {
 		log.Print("allow (empty referer)")
@@ -44,11 +44,14 @@ func handleRequest(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *ht
 	if err != nil {
 		fmt.Printf("failed to parse url %e\n", err)
 	}
+
 	// allow local link
 	if req.Host == refererUrl.Host {
 		log.Printf("allowing (local link) from %s to %s\n", referer, req.Host)
 		return req, nil
 	}
+
+	// check if the uri is allowed once (static external links)
 	index := find(allowOnceList, req.URL.String())
 	if index != -1 {
 		log.Printf("allowing %s once", req.URL.String())
@@ -64,9 +67,9 @@ func handleRequest(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *ht
 		return req, goproxy.NewResponse(req, "text/html", 200, "Blocked request")
 	}
 }
-func handleResponse(s string, ctx *goproxy.ProxyCtx) string {
-	extractLinks(s)
-	return s
+func handleResponse(body string, ctx *goproxy.ProxyCtx) string {
+	extractLinks(body)
+	return body
 }
 
 // search for external links and add them to the allowOnceList
@@ -88,7 +91,6 @@ func extractLinks(body string) {
 }
 
 func isExternal(link string) bool {
-	// extremely stupid way to test this
 	return strings.HasPrefix(link, "http") || strings.HasPrefix(link, "www")
 }
 
